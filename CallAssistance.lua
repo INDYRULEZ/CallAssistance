@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.2"
+local VERSION = "1.3"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -45,7 +45,7 @@ local TEXTE = {
         gesetzt = "%s: %s = %s",
         treffer = "Anfrage erkannt: %s",
         import_ok = "%d Anfrage(n) übernommen — Namen kommen aus dem Zauber",
-        import_leer = "Code fehlt: /ca import <SpellID>|<Flüstertext>|<Ziel>;…",
+        import_leer = "Code fehlt: /ca import <SpellID>|<Flüstertext>|<Ziel>|<Dauer>;…",
         export_kopf = "Code zum Weitergeben:",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
@@ -97,7 +97,7 @@ local TEXTE = {
         gesetzt = "%s: %s = %s",
         treffer = "request detected: %s",
         import_ok = "%d request(s) imported — names come from the spell",
-        import_leer = "code missing: /ca import <SpellID>|<whisper text>|<target>;…",
+        import_leer = "code missing: /ca import <SpellID>|<whisper text>|<target>|<duration>;…",
         export_kopf = "code to share:",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
@@ -567,7 +567,8 @@ local function exportCode()
     for _, p in ipairs(DB.posten) do
         local phrase = tostring(p.phrase or ""):gsub("[;|]", " ")
         local ziel = tostring(p.ziel or ""):gsub("[;|]", " ")
-        table.insert(teile, string.format("%d|%s|%s", p.spellID or 0, phrase, ziel))
+        table.insert(teile, string.format("%d|%s|%s|%d", p.spellID or 0, phrase, ziel,
+            math.floor(p.dauer or 10)))
     end
     return table.concat(teile, ";")
 end
@@ -576,9 +577,16 @@ local function importCode(code)
     if type(code) ~= "string" or #code == 0 then return 0 end
     local anzahl = 0
     for eintrag in string.gmatch(code, "([^;]+)") do
-        local id, phrase, ziel = string.match(eintrag, "^(%d+)|(.-)|(.*)$")
-        local spellID = id and tonumber(id)
+        local felder = {}
+        for feld in string.gmatch(eintrag .. "|", "([^|]*)|") do
+            table.insert(felder, feld)
+        end
+        local spellID = tonumber(felder[1])
         if spellID and spellID > 0 then
+            local phrase = felder[2] or ""
+            local ziel = felder[3] or ""
+            local dauer = tonumber(felder[4])
+            if not dauer or dauer <= 0 then dauer = nil end
             local name
             if C_Spell and C_Spell.GetSpellInfo then
                 local info = C_Spell.GetSpellInfo(spellID)
@@ -589,8 +597,9 @@ local function importCode(code)
                 if p.spellID == spellID then vorhanden = p; break end
             end
             if vorhanden then
-                vorhanden.phrase = phrase or vorhanden.phrase
-                vorhanden.ziel = ziel or vorhanden.ziel
+                vorhanden.phrase = phrase
+                vorhanden.ziel = ziel
+                if dauer then vorhanden.dauer = dauer end
                 if name and #name > 0 then vorhanden.name = name end
             else
                 DB.naechsteID = (DB.naechsteID or 1) + 1
@@ -599,9 +608,9 @@ local function importCode(code)
                     name = name or ("Spell " .. tostring(spellID)),
                     spellID = spellID,
                     icon = 0,
-                    phrase = phrase or "",
-                    ziel = ziel or "",
-                    dauer = 10,
+                    phrase = phrase,
+                    ziel = ziel,
+                    dauer = dauer or 10,
                 })
             end
             anzahl = anzahl + 1

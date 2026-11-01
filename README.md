@@ -67,12 +67,13 @@ Einstellungen.
 Damit der Mitspieler nichts eintippen muss: `/ca export` gibt einen kurzen Code aus
 
 ```
-370665|Rescue me|CharName;407497|Paradox me|CharName
+370665|Rescue me|CharName|3;407497|Paradox me|CharName|12
 ```
 
-Der andere fügt ihn mit `/ca import <Code>` ein. Format ist `SpellID|Flüstertext|Ziel`,
-mehrere Zeilen durch `;` getrennt. Der **Name** der Anfrage wird nicht mitgeschickt — er kommt
-aus dem Zauber selbst. Vorhandene Zauber werden aktualisiert statt doppelt angelegt.
+Der andere fügt ihn mit `/ca import <Code>` ein. Format ist
+`SpellID|Flüstertext|Ziel|Dauer`, mehrere Zeilen durch `;` getrennt (Dauer darf fehlen).
+Der **Name** der Anfrage wird nicht mitgeschickt — er kommt aus dem Zauber selbst.
+Vorhandene Zauber werden aktualisiert statt doppelt angelegt.
 
 ## Grenzen
 
