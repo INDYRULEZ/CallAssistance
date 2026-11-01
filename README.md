@@ -56,13 +56,17 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 | `/ca export` | Code zum Weitergeben an einen Mitspieler |
 | `/ca import <Code>` | Tabelle aus so einem Code übernehmen |
 | `/ca macros` | für alle Zeilen Makros anlegen |
+| `/ca position` | Anzeige mit der Maus verschieben |
 | `/ca anzeige symbol\|zahl\|balken an\|aus` | Anzeige umschalten |
 | `/ca test` | Test-Anzeige, 10 Sekunden |
 | `/ca debug` | zeigt im Chat, was erkannt wird |
 | `/ca an` / `/ca aus` | Addon ein/aus |
 
-Die Anzeige lässt sich mit der Maus verschieben; Größe und Bestandteile stehen in den
-Einstellungen.
+Die Anzeige lässt sich mit der Maus verschieben. Weil sie ohne laufenden Countdown unsichtbar
+ist, gibt es dafür `/ca position`: dann erscheint ein blauer Platzhalter, den du an die richtige
+Stelle ziehst — nochmal `/ca position` beendet den Modus. Die Position wird gespeichert.
+Die Knopfleiste verschiebst du am kleinen Griff links neben den Symbolen. Größe und Bestandteile
+der Anzeige stehen in den Einstellungen.
 
 ## Tabelle weitergeben
 

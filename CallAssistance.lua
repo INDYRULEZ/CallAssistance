@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.6"
+local VERSION = "1.7"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -48,6 +48,9 @@ local TEXTE = {
         import_leer = "Code fehlt: /ca import <SpellID>|<Flüstertext>|<Ziel>|<Dauer>;…",
         export_kopf = "Code zum Weitergeben:",
         kein_kampf = "im Kampf nicht möglich — bitte außerhalb",
+        position_hinweis = "Anzeige hierher ziehen · /ca position beendet",
+        position_an = "Platzieren: Anzeige mit der Maus verschieben, dann /ca position zum Beenden",
+        position_aus = "Platzieren beendet",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
         hilfe = [[
@@ -64,6 +67,7 @@ local TEXTE = {
   /ca export                 Code zum Weitergeben an einen Mitspieler
   /ca import <Code>          Tabelle aus so einem Code übernehmen
   /ca macros                 für alle Zeilen Makros anlegen
+  /ca position               Anzeige mit der Maus verschieben
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  zeigt, was erkannt wird]],
     },
@@ -102,6 +106,9 @@ local TEXTE = {
         import_leer = "code missing: /ca import <SpellID>|<whisper text>|<target>|<duration>;…",
         export_kopf = "code to share:",
         kein_kampf = "not possible in combat — please do it outside",
+        position_hinweis = "drag the display here · /ca position to finish",
+        position_an = "placing: move the display with the mouse, then /ca position to finish",
+        position_aus = "placing finished",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
         hilfe = [[
@@ -118,6 +125,7 @@ local TEXTE = {
   /ca export                 code to share with another player
   /ca import <code>          take over a table from such a code
   /ca macros                 create macros for all rows
+  /ca position               move the display with the mouse
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  show what is detected]],
     },
@@ -163,6 +171,9 @@ local START = {
 }
 
 local DB
+
+-- Knopfleiste (Definition weiter unten, hier vorwaerts deklariert)
+local leiste, leisteNeu, leisteDirty
 
 -- Einstellungsseite (Definition weiter unten, hier nur vorwaerts deklariert)
 local optionenPanel, inhaltFrame, aufbauZaehler = nil, nil, 0
@@ -335,6 +346,36 @@ local function setzePosition()
     end
 end
 
+-- Positionier-Modus: Anzeige sichtbar machen, damit sie sich mit der Maus verschieben lässt.
+local platzFlaeche, platzHinweis
+local platzieren = false
+
+local function setzePlatzieren(an)
+    if not DB then return end
+    platzieren = an and true or false
+    if not platzFlaeche then
+        platzFlaeche = anzeige:CreateTexture(nil, "BACKGROUND")
+        platzFlaeche:SetAllPoints()
+        platzFlaeche:SetColorTexture(0.2, 0.7, 1, 0.25)
+        platzHinweis = anzeige:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        platzHinweis:SetPoint("BOTTOM", anzeige, "TOP", 0, 4)
+    end
+    if platzieren then
+        platzHinweis:SetText(T("position_hinweis"))
+        platzFlaeche:Show()
+        platzHinweis:Show()
+        local groesse = DB.groesse or 40
+        anzeige:SetSize(groesse + 70, groesse + 12)
+        anzeige:Show()
+        leisteNeu()
+    else
+        platzFlaeche:Hide()
+        platzHinweis:Hide()
+        if #laufend == 0 then anzeige:Hide() end
+        leisteNeu()
+    end
+end
+
 -- ---------------------------------------------------------------- Buff lesen
 
 -- Liefert Restsekunden oder nil, wenn (gerade) nicht lesbar / nicht aktiv.
@@ -358,7 +399,7 @@ end
 -- Eigene Knöpfe statt Makros: SecureActionButtonTemplate mit macrotext — damit geht
 -- das Flüstern auch im Kampf (dieselbe Ausnahme wie ein Makro, nur ohne Ziehen in die Leiste).
 
-local leiste = CreateFrame("Frame", "CallAssistanceLeiste", UIParent)
+leiste = CreateFrame("Frame", "CallAssistanceLeiste", UIParent)
 leiste:SetSize(40, 36)
 leiste:SetPoint("CENTER", UIParent, "CENTER", 0, -160)
 leiste:SetFrameStrata("HIGH")
@@ -376,7 +417,8 @@ end)
 leiste:Hide()
 
 local knoepfe = {}
-local leisteDirty = false
+local griff
+leisteDirty = false
 
 local function setzeLeistenPosition()
     if not DB then return end
@@ -389,13 +431,36 @@ local function setzeLeistenPosition()
     end
 end
 
-local function leisteNeu()
+leisteNeu = function()
     if not DB then return end
     if InCombatLockdown() then
         leisteDirty = true          -- im Kampf keine Attribute setzen: nach dem Kampf nachziehen
         return
     end
     leisteDirty = false
+
+    -- Griff links: nur darüber lässt sich die Leiste ziehen (die Knöpfe selbst klicken)
+    if not griff then
+        griff = CreateFrame("Frame", nil, leiste)
+        griff:SetSize(10, 36)
+        griff:SetPoint("TOPLEFT", leiste, "TOPLEFT", 0, 0)
+        griff:EnableMouse(true)
+        griff:RegisterForDrag("LeftButton")
+        griff:SetScript("OnDragStart", function()
+            if not InCombatLockdown() then leiste:StartMoving() end
+        end)
+        griff:SetScript("OnDragStop", function()
+            leiste:StopMovingOrSizing()
+            local point, _, _, x, y = leiste:GetPoint()
+            if DB then DB.leistePosition = { point = point, x = x, y = y } end
+        end)
+        local flaeche = griff:CreateTexture(nil, "ARTWORK")
+        flaeche:SetAllPoints()
+        flaeche:SetColorTexture(1, 1, 1, 0.18)
+        local pfeil = griff:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        pfeil:SetPoint("CENTER")
+        pfeil:SetText("⋮")
+    end
 
     for _, b in ipairs(knoepfe) do b:Hide() end
 
@@ -438,12 +503,12 @@ local function leisteNeu()
             b.icon:SetDesaturated(false)
 
             b:ClearAllPoints()
-            b:SetPoint("TOPLEFT", leiste, "TOPLEFT", (anzahl - 1) * (groesse + 4), 0)
+            b:SetPoint("TOPLEFT", leiste, "TOPLEFT", 12 + (anzahl - 1) * (groesse + 4), 0)
             b:Show()
         end
     end
 
-    leiste:SetWidth(math.max(1, anzahl * (groesse + 4)))
+    leiste:SetWidth(math.max(1, 12 + anzahl * (groesse + 4)))
     leiste:SetHeight(groesse)
     if anzahl > 0 then leiste:Show() else leiste:Hide() end
 end
@@ -820,6 +885,9 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
     elseif befehl == "export" then
         print("|cff40ff40CallAssistance|r " .. T("export_kopf"))
         print(exportCode())
+    elseif befehl == "position" or befehl == "bewegen" then
+        setzePlatzieren(not platzieren)
+        print("|cff40ff40CallAssistance|r " .. (platzieren and T("position_an") or T("position_aus")))
     elseif befehl == "macros" then
         istDa()
         if InCombatLockdown() then
