@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.1"
+local VERSION = "1.2"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -44,6 +44,9 @@ local TEXTE = {
         neu_gemacht = "hinzugefügt: %s (ID %d) — Flüstertext jetzt mit /ca phrase %d <Text> setzen",
         gesetzt = "%s: %s = %s",
         treffer = "Anfrage erkannt: %s",
+        import_ok = "%d Anfrage(n) übernommen — Namen kommen aus dem Zauber",
+        import_leer = "Code fehlt: /ca import <SpellID>|<Flüstertext>|<Ziel>;…",
+        export_kopf = "Code zum Weitergeben:",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
         hilfe = [[
@@ -57,6 +60,8 @@ local TEXTE = {
   /ca ziel <Zeile> <Name>    Person, die den Zauber wirkt
   /ca dauer <Zeile> <Sek>    Gesamtdauer für den Selbst-Countdown
   /ca macro <Zeile>          Makro für die Zeile erstellen
+  /ca export                 Code zum Weitergeben an einen Mitspieler
+  /ca import <Code>          Tabelle aus so einem Code übernehmen
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  zeigt, was erkannt wird]],
     },
@@ -91,6 +96,9 @@ local TEXTE = {
         neu_gemacht = "added: %s (ID %d) — set the whisper text with /ca phrase %d <text>",
         gesetzt = "%s: %s = %s",
         treffer = "request detected: %s",
+        import_ok = "%d request(s) imported — names come from the spell",
+        import_leer = "code missing: /ca import <SpellID>|<whisper text>|<target>;…",
+        export_kopf = "code to share:",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
         hilfe = [[
@@ -104,6 +112,8 @@ local TEXTE = {
   /ca ziel <row> <name>      who casts the spell
   /ca dauer <row> <sec>      total duration for the self-countdown
   /ca macro <row>            create the macro for the row
+  /ca export                 code to share with another player
+  /ca import <code>          take over a table from such a code
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  show what is detected]],
     },
@@ -547,6 +557,60 @@ local function makroErstellen(posten)
     end
 end
 
+-- ---------------------------------------------------------------- Export / Import
+-- Kompakter Textcode, damit der Mitspieler nichts eintippen muss:
+--   <SpellID>|<Flüstertext>|<Ziel>;<SpellID>|<Flüstertext>|<Ziel>
+-- Der Name der Anfrage kommt aus dem Zauber (C_Spell.GetSpellInfo), nicht aus dem Code.
+
+local function exportCode()
+    local teile = {}
+    for _, p in ipairs(DB.posten) do
+        local phrase = tostring(p.phrase or ""):gsub("[;|]", " ")
+        local ziel = tostring(p.ziel or ""):gsub("[;|]", " ")
+        table.insert(teile, string.format("%d|%s|%s", p.spellID or 0, phrase, ziel))
+    end
+    return table.concat(teile, ";")
+end
+
+local function importCode(code)
+    if type(code) ~= "string" or #code == 0 then return 0 end
+    local anzahl = 0
+    for eintrag in string.gmatch(code, "([^;]+)") do
+        local id, phrase, ziel = string.match(eintrag, "^(%d+)|(.-)|(.*)$")
+        local spellID = id and tonumber(id)
+        if spellID and spellID > 0 then
+            local name
+            if C_Spell and C_Spell.GetSpellInfo then
+                local info = C_Spell.GetSpellInfo(spellID)
+                if info and info.name then name = info.name end
+            end
+            local vorhanden
+            for _, p in ipairs(DB.posten) do
+                if p.spellID == spellID then vorhanden = p; break end
+            end
+            if vorhanden then
+                vorhanden.phrase = phrase or vorhanden.phrase
+                vorhanden.ziel = ziel or vorhanden.ziel
+                if name and #name > 0 then vorhanden.name = name end
+            else
+                DB.naechsteID = (DB.naechsteID or 1) + 1
+                table.insert(DB.posten, {
+                    id = DB.naechsteID,
+                    name = name or ("Spell " .. tostring(spellID)),
+                    spellID = spellID,
+                    icon = 0,
+                    phrase = phrase or "",
+                    ziel = ziel or "",
+                    dauer = 10,
+                })
+            end
+            anzahl = anzahl + 1
+        end
+    end
+    if optionenPanel and aufbauen then aufbauen() end
+    return anzahl
+end
+
 -- ---------------------------------------------------------------- Slash
 
 local function hilfe()
@@ -626,6 +690,16 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
         end
         print("|cff40ff40CallAssistance|r " .. T("gesetzt", posten.name or "?", befehl, tostring(wert)))
         if optionenPanel then aufbauen() end
+    elseif befehl == "import" then
+        local anzahl = importCode(arg)
+        if anzahl == 0 then
+            print("|cffff8080CallAssistance|r " .. T("import_leer"))
+        else
+            print("|cff40ff40CallAssistance|r " .. T("import_ok", anzahl))
+        end
+    elseif befehl == "export" then
+        print("|cff40ff40CallAssistance|r " .. T("export_kopf"))
+        print(exportCode())
     elseif befehl == "macro" then
         local idx = tonumber(arg)
         local posten = idx and DB.posten[math.floor(idx)]

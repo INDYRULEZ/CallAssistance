@@ -52,6 +52,8 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 | `/ca dauer <Zeile> <Sekunden>` | Dauer für den Countdown |
 | `/ca icon <Zeile> <ID>` | eigenes Symbol (0 = Symbol des Zaubers) |
 | `/ca macro <Zeile>` | Makro für diese Zeile erstellen |
+| `/ca export` | Code zum Weitergeben an einen Mitspieler |
+| `/ca import <Code>` | Tabelle aus so einem Code übernehmen |
 | `/ca anzeige symbol\|zahl\|balken an\|aus` | Anzeige umschalten |
 | `/ca test` | Test-Anzeige, 10 Sekunden |
 | `/ca debug` | zeigt im Chat, was erkannt wird |
@@ -59,6 +61,18 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 
 Die Anzeige lässt sich mit der Maus verschieben; Größe und Bestandteile stehen in den
 Einstellungen.
+
+## Tabelle weitergeben
+
+Damit der Mitspieler nichts eintippen muss: `/ca export` gibt einen kurzen Code aus
+
+```
+370665|Rescue me|CharName;407497|Paradox me|CharName
+```
+
+Der andere fügt ihn mit `/ca import <Code>` ein. Format ist `SpellID|Flüstertext|Ziel`,
+mehrere Zeilen durch `;` getrennt. Der **Name** der Anfrage wird nicht mitgeschickt — er kommt
+aus dem Zauber selbst. Vorhandene Zauber werden aktualisiert statt doppelt angelegt.
 
 ## Grenzen
 
