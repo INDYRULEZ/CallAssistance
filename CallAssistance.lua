@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.8"
+local VERSION = "1.9"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -51,6 +51,7 @@ local TEXTE = {
         position_hinweis = "Anzeige hierher ziehen · /ca position beendet",
         position_an = "Platzieren: Anzeige mit der Maus verschieben, dann /ca position zum Beenden",
         position_aus = "Platzieren beendet",
+        btn_move = "Anzeige verschieben",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
         hilfe = [[
@@ -109,6 +110,7 @@ local TEXTE = {
         position_hinweis = "drag the display here · /ca position to finish",
         position_an = "placing: move the display with the mouse, then /ca position to finish",
         position_aus = "placing finished",
+        btn_move = "Move display",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
         hilfe = [[
@@ -985,6 +987,20 @@ aufbauen = function()
         DB.groesse = wert
         groesseWert:SetText(string.format("%d", wert))
         zeilenBauen()
+    end)
+
+    local verschieben = CreateFrame("Button", nil, c, "UIPanelButtonTemplate")
+    verschieben:SetSize(190, 22)
+    verschieben:SetPoint("TOPLEFT", c, "TOPLEFT", 330, y - 38)
+    verschieben:SetText(T("btn_move"))
+    verschieben:SetScript("OnClick", function()
+        if InCombatLockdown() then
+            print("|cffff8080CallAssistance|r " .. T("kein_kampf"))
+            return
+        end
+        if SettingsPanel and SettingsPanel:IsShown() then HideUIPanel(SettingsPanel) end
+        setzePlatzieren(true)
+        print("|cff40ff40CallAssistance|r " .. T("position_an"))
     end)
 
     -- ---------------- Kanaele

@@ -64,8 +64,9 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 
 Die Anzeige lässt sich mit der Maus verschieben. Weil sie ohne laufenden Countdown unsichtbar
 ist, gibt es dafür `/ca position`: dann erscheint ein blauer Platzhalter, den du an die richtige
-Stelle ziehst — nochmal `/ca position` beendet den Modus. Die Position wird gespeichert.
-Größe und Bestandteile der Anzeige stehen in den Einstellungen.
+stelle ziehst — nochmal `/ca position` beendet den Modus. Die Position wird gespeichert.
+Dasselbe geht über den Knopf **„Anzeige verschieben"** in den Einstellungen (der schließt die
+Optionen gleich mit). Größe und Bestandteile der Anzeige stehen in den Einstellungen.
 
 ## Tabelle weitergeben
 
