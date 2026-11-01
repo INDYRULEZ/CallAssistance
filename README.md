@@ -54,6 +54,7 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 | `/ca macro <Zeile>` | Makro für diese Zeile erstellen |
 | `/ca export` | Code zum Weitergeben an einen Mitspieler |
 | `/ca import <Code>` | Tabelle aus so einem Code übernehmen |
+| `/ca macros` | für alle Zeilen Makros anlegen |
 | `/ca anzeige symbol\|zahl\|balken an\|aus` | Anzeige umschalten |
 | `/ca test` | Test-Anzeige, 10 Sekunden |
 | `/ca debug` | zeigt im Chat, was erkannt wird |

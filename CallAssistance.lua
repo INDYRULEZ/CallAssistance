@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.3"
+local VERSION = "1.4"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -47,6 +47,7 @@ local TEXTE = {
         import_ok = "%d Anfrage(n) übernommen — Namen kommen aus dem Zauber",
         import_leer = "Code fehlt: /ca import <SpellID>|<Flüstertext>|<Ziel>|<Dauer>;…",
         export_kopf = "Code zum Weitergeben:",
+        kein_kampf = "im Kampf nicht möglich — bitte außerhalb",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
         hilfe = [[
@@ -62,6 +63,7 @@ local TEXTE = {
   /ca macro <Zeile>          Makro für die Zeile erstellen
   /ca export                 Code zum Weitergeben an einen Mitspieler
   /ca import <Code>          Tabelle aus so einem Code übernehmen
+  /ca macros                 für alle Zeilen Makros anlegen
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  zeigt, was erkannt wird]],
     },
@@ -99,6 +101,7 @@ local TEXTE = {
         import_ok = "%d request(s) imported — names come from the spell",
         import_leer = "code missing: /ca import <SpellID>|<whisper text>|<target>|<duration>;…",
         export_kopf = "code to share:",
+        kein_kampf = "not possible in combat — please do it outside",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
         hilfe = [[
@@ -114,6 +117,7 @@ local TEXTE = {
   /ca macro <row>            create the macro for the row
   /ca export                 code to share with another player
   /ca import <code>          take over a table from such a code
+  /ca macros                 create macros for all rows
   /ca anzeige symbol|zahl|balken an|aus
   /ca debug                  show what is detected]],
     },
@@ -709,6 +713,20 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
     elseif befehl == "export" then
         print("|cff40ff40CallAssistance|r " .. T("export_kopf"))
         print(exportCode())
+    elseif befehl == "macros" then
+        istDa()
+        if InCombatLockdown() then
+            print("|cffff8080CallAssistance|r " .. T("kein_kampf"))
+            return
+        end
+        local anzahl = 0
+        for _, posten in ipairs(DB.posten) do
+            if posten.ziel and #posten.ziel > 0 then
+                makroErstellen(posten)
+                anzahl = anzahl + 1
+            end
+        end
+        if anzahl == 0 then print("|cffff8080CallAssistance|r " .. T("ziel_fehlt")) end
     elseif befehl == "macro" then
         local idx = tonumber(arg)
         local posten = idx and DB.posten[math.floor(idx)]
