@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.4"
+local VERSION = "1.5"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -579,6 +579,11 @@ end
 
 local function importCode(code)
     if type(code) ~= "string" or #code == 0 then return 0 end
+    -- Trenner tolerant: | ist der Standard, # und , werden ebenfalls akzeptiert
+    if not string.find(code, "|", 1, true) then
+        code = string.gsub(code, "#", "|")
+        code = string.gsub(code, ",", "|")
+    end
     local anzahl = 0
     for eintrag in string.gmatch(code, "([^;]+)") do
         local felder = {}
