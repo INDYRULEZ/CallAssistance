@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "0.1"
+local VERSION = "1.1"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -27,7 +27,7 @@ local TEXTE = {
         slider_size = "Symbolgröße",
         btn_macro = "Macro erstellen", btn_new = "+ Anfrage hinzufügen",
         hint_spells = "Symbol leer = Zauber-Symbol · Ziel = wer den Zauber wirkt · "
-            .. "Dauer = Sekunden, die der Buff hält (0 = aus dem Zauber-Tooltip versuchen). × entfernt die Zeile.",
+            .. "Dauer = Sekunden, die der Buff hält. × entfernt die Zeile.",
         hilfe_titel = "— Befehle:",
         geladen = "CallAssistance %s geladen — /ca für Befehle",
         makro_angelegt = "Makro angelegt (charakterspezifisch): %s",
@@ -74,7 +74,7 @@ local TEXTE = {
         slider_size = "Icon size",
         btn_macro = "Create macro", btn_new = "+ Add request",
         hint_spells = "Icon empty = spell icon · Target = who casts the spell · "
-            .. "Duration = seconds the buff lasts (0 = try the spell tooltip). × removes the row.",
+            .. "Duration = seconds the buff lasts. × removes the row.",
         hilfe_titel = "— commands:",
         geladen = "CallAssistance %s loaded — /ca for commands",
         makro_angelegt = "macro created (character specific): %s",
@@ -140,7 +140,6 @@ local VORGABEN = {
     zeigeBalken = true,
     groesse = 40,
     debug = false,
-    dauern = {},        -- SpellID -> Gesamtdauer in Sekunden (aus Tooltip gelernt)
     position = nil,     -- {point, x, y}
 }
 
@@ -341,84 +340,6 @@ local function buffRest(posten)
     return rest, daten.duration
 end
 
--- ---------------------------------------------------------------- Dauer aus dem Zauber
-
--- Gesamtdauer steckt in keinem API-Feld, aber im Tooltip ("Lasts 15 sec." / "Dauer: 15 Sek.").
--- C_TooltipInfo liefert die Zeilen als Daten — kein sichtbares Tooltip nötig.
-local EINHEITEN = {
-    sec = 1, secs = 1, second = 1, seconds = 1,
-    sek = 1, sekunde = 1, sekunden = 1,
-    min = 60, mins = 60, minute = 60, minutes = 60, minuten = 60,
-}
-
-local function dauerAusText(text)
-    local t = string.lower(tostring(text or ""))
-    t = string.gsub(t, "|c%x%x%x%x%x%x%x%x", "")
-    t = string.gsub(t, "|r", "")
-    if string.find(t, "zauberzeit", 1, true) or string.find(t, "cast time", 1, true) then
-        return nil
-    end
-    if not (string.find(t, "dauer", 1, true) or string.find(t, "last", 1, true)
-        or string.find(t, "hält", 1, true) or string.find(t, "duration", 1, true)) then
-        return nil
-    end
-    local gefunden
-    for zahl, einheit in string.gmatch(t, "(%d+%.?%d*)%s*(%a+)") do
-        local faktor = EINHEITEN[einheit]
-        local wert = tonumber(zahl)
-        if faktor and wert and wert > 0 then
-            gefunden = math.floor(wert * faktor + 0.5)
-            break
-        end
-    end
-    return gefunden
-end
-
--- Merkt sich Dauern je SpellID in DB.dauern (Tooltip-Wissen und beobachtete Buff-Laufzeit).
-local function merkeDauer(spellID, sekunden)
-    if not spellID or spellID <= 0 then return end
-    if not sekunden or sekunden <= 0 then return end
-    DB.dauern = DB.dauern or {}
-    DB.dauern[spellID] = math.floor(sekunden + 0.5)
-end
-
-local function dauerAusSpell(spellID)
-    if not spellID or spellID <= 0 then return nil end
-    if DB.dauern and DB.dauern[spellID] then return DB.dauern[spellID] end
-    if not C_TooltipInfo or not C_TooltipInfo.GetSpellByID then return nil end
-    local ok, daten = pcall(C_TooltipInfo.GetSpellByID, spellID)
-    if not ok or type(daten) ~= "table" or type(daten.lines) ~= "table" then return nil end
-    for _, zeile in ipairs(daten.lines) do
-        local text = tostring(zeile.leftText or "") .. " " .. tostring(zeile.rightText or "")
-        local dauer = dauerAusText(text)
-        if dauer and dauer > 0 then
-            merkeDauer(spellID, dauer)
-            return dauer
-        end
-    end
-    return nil
-end
-
--- Alle Tooltip-Zeilen eines Zaubers im Chat ausgeben (zum Prüfen im Spiel, auch im Kampf)
-local function zeigeSpellInfo(spellID)
-    local dauer = dauerAusSpell(spellID)
-    print(("|cff40ff40CallAssistance|r Spell %d: Dauer = %s"):format(
-        spellID, dauer and (dauer .. " s") or "nicht gefunden"))
-    if not C_TooltipInfo or not C_TooltipInfo.GetSpellByID then
-        print("|cffff8080CallAssistance|r C_TooltipInfo fehlt in diesem Client")
-        return
-    end
-    local ok, daten = pcall(C_TooltipInfo.GetSpellByID, spellID)
-    if not ok or type(daten) ~= "table" or type(daten.lines) ~= "table" then
-        print("|cffff8080CallAssistance|r Tooltip nicht lesbar: " .. tostring(daten))
-        return
-    end
-    for i, zeile in ipairs(daten.lines) do
-        print(("  %d) %s%s"):format(i, tostring(zeile.leftText or ""),
-            zeile.rightText and (" " .. tostring(zeile.rightText)) or ""))
-    end
-end
-
 -- ---------------------------------------------------------------- Anfrage starten
 
 local indexLaufend = {}
@@ -441,11 +362,8 @@ local function starte(posten, dauerOverride)
         table.insert(laufend, eintrag)
     end
     eintrag.start = jetzt
-    -- Dauer: die eingetragene Spalte hat Vorrang (0 = aus dem Zauber-Tooltip versuchen)
-    local dauer = dauerOverride or posten.dauer
-    if not dauer or dauer <= 0 then dauer = dauerAusSpell(posten.spellID) end
-    if not dauer or dauer <= 0 then dauer = 10 end
-    eintrag.dauer = dauer
+    eintrag.dauer = dauerOverride or posten.dauer or 10
+    if eintrag.dauer <= 0 then eintrag.dauer = 10 end
     eintrag.gesamt = eintrag.dauer
     eintrag.bis = nil
     eintrag.ausApi = false
@@ -489,11 +407,7 @@ anzeige:SetScript("OnUpdate", function(_, dt)
             if rest then
                 eintrag.rest = rest
                 eintrag.ausApi = true
-                -- beobachtete Buff-Laufzeit ist genauer als der Tooltip
-                if buffDauer and buffDauer > 0 then
-                    eintrag.dauer = buffDauer
-                    merkeDauer(eintrag.posten.spellID, buffDauer)
-                end
+                if buffDauer and buffDauer > 0 then eintrag.dauer = buffDauer end
                 eintrag.gesamt = eintrag.gesamt or eintrag.dauer
             else
                 eintrag.ausApi = false
@@ -712,16 +626,6 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
         end
         print("|cff40ff40CallAssistance|r " .. T("gesetzt", posten.name or "?", befehl, tostring(wert)))
         if optionenPanel then aufbauen() end
-    elseif befehl == "spell" then
-        local id = tonumber(arg)
-        if not id then
-            print("|cffff8080CallAssistance|r /ca spell <SpellID>")
-            return
-        end
-        zeigeSpellInfo(math.floor(id))
-    elseif befehl == "dauerneu" then
-        DB.dauern = {}
-        print("|cff40ff40CallAssistance|r gemerkte Dauern gelöscht")
     elseif befehl == "macro" then
         local idx = tonumber(arg)
         local posten = idx and DB.posten[math.floor(idx)]

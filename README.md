@@ -19,11 +19,9 @@ Kampfgetümmel tippen wollen — und wissen möchten, wie lange der Buff noch l�
    (`CHAT_MSG_WHISPER_INFORM`) und blendet Symbol, Restzeit und Balken ein.
 4. Die Restzeit zählt ab dem Flüstern mit der eingetragenen **Dauer** herunter.
 
-**Warum die Dauer von Hand?** Die Laufzeit eines laufenden Buffs ist im Kampf für Addons
-gesperrt — Blizzard liefert sie nur außerhalb des Kampfes. Ein API-Feld für die Gesamtdauer
-eines Zaubers gibt es nicht. Als Zugabe versucht das Addon, die Dauer aus dem Zauber-Tooltip
-zu lesen, wenn in der Spalte `Dauer` eine **0** steht; das klappt nicht bei jedem Zauber.
-Außerhalb des Kampfes liest es die echte Buff-Laufzeit und merkt sie sich.
+**Die Dauer trägst du selbst ein.** Blizzard liefert Addons weder im Kampf die Laufzeit eines
+laufenden Buffs noch überhaupt ein Feld für die Gesamtdauer eines Zaubers. Außerhalb des Kampfes
+liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert sich damit.
 
 ## Installation
 
@@ -51,7 +49,7 @@ Außerhalb des Kampfes liest es die echte Buff-Laufzeit und merkt sie sich.
 | `/ca weg <Zeile>` | Zeile entfernen |
 | `/ca phrase <Zeile> <Text>` | Flüstertext setzen |
 | `/ca ziel <Zeile> <Name>` | wer den Zauber wirkt |
-| `/ca dauer <Zeile> <Sekunden>` | Dauer für den Countdown (0 = aus dem Tooltip versuchen) |
+| `/ca dauer <Zeile> <Sekunden>` | Dauer für den Countdown |
 | `/ca icon <Zeile> <ID>` | eigenes Symbol (0 = Symbol des Zaubers) |
 | `/ca macro <Zeile>` | Makro für diese Zeile erstellen |
 | `/ca anzeige symbol\|zahl\|balken an\|aus` | Anzeige umschalten |
