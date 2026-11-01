@@ -81,11 +81,14 @@ Damit der Mitspieler nichts eintippen muss: `/ca export` gibt einen kurzen Code 
 
 Der andere fügt ihn mit `/ca import <Code>` ein. Format ist
 `SpellID|Flüstertext|Ziel|Dauer`, mehrere Zeilen durch `;` getrennt (Dauer darf fehlen).
+Im Chat funktionieren auch **Komma** oder `#` als Trenner — die Pipe wird beim Einfügen
+manchmal verschluckt.
 Der **Name** der Anfrage wird nicht mitgeschickt — er kommt aus dem Zauber selbst.
 Vorhandene Zauber werden aktualisiert statt doppelt angelegt.
 
 Danach ist nichts weiter zu tun: Tabelle gefüllt und die Makros sind schon angelegt (die
-Makro-Namen stehen im Chat). Nur noch auf die Aktionsleiste ziehen.
+Makro-Namen stehen im Chat). Nur noch auf die Aktionsleiste ziehen. Wurde im Kampf importiert,
+legt Blizzard keine Makros an — dann danach `/ca macros`.
 
 ## Grenzen
 
