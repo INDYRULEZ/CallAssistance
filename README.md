@@ -64,9 +64,12 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 
 Die Anzeige lässt sich mit der Maus verschieben. Weil sie ohne laufenden Countdown unsichtbar
 ist, gibt es dafür `/ca position`: dann erscheint ein blauer Platzhalter, den du an die richtige
-stelle ziehst — nochmal `/ca position` beendet den Modus. Die Position wird gespeichert.
-Dasselbe geht über den Knopf **„Anzeige verschieben"** in den Einstellungen (der schließt die
-Optionen gleich mit). Größe und Bestandteile der Anzeige stehen in den Einstellungen.
+stelle ziehst — nochmal `/ca position` oder der Knopf **„Fertig"** in der Bildschirmmitte beendet
+den Modus. Die Position wird gespeichert. Dasselbe geht über den Knopf **„Anzeige verschieben"**
+in den Einstellungen (der schließt die Optionen gleich mit). Größe und Bestandteile der Anzeige
+stehen in den Einstellungen.
+
+**Dauer 0** heißt: für diese Zeile wird kein Symbol angezeigt (z. B. bei Zaubern ohne Buff).
 
 ## Tabelle weitergeben
 

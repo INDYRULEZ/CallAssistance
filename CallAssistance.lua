@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.9"
+local VERSION = "2.0"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -27,7 +27,7 @@ local TEXTE = {
         slider_size = "Symbolgröße",
         btn_macro = "Macro erstellen", btn_new = "+ Anfrage hinzufügen",
         hint_spells = "Symbol leer = Zauber-Symbol · Ziel = wer den Zauber wirkt · "
-            .. "Dauer = Sekunden, die der Buff hält. × entfernt die Zeile.",
+            .. "Dauer = Sekunden, die der Buff hält (0 = gar nicht anzeigen). × entfernt die Zeile.",
         hilfe_titel = "— Befehle:",
         geladen = "CallAssistance %s geladen — /ca für Befehle",
         makro_angelegt = "Makro angelegt (charakterspezifisch): %s",
@@ -52,6 +52,7 @@ local TEXTE = {
         position_an = "Platzieren: Anzeige mit der Maus verschieben, dann /ca position zum Beenden",
         position_aus = "Platzieren beendet",
         btn_move = "Anzeige verschieben",
+        btn_done = "Fertig",
         buff_aus_api = "Restzeit aus Buff-API: %s",
         buff_nicht_lesbar = "Buff nicht lesbar — zähle selbst (%.0f s)",
         hilfe = [[
@@ -86,7 +87,7 @@ local TEXTE = {
         slider_size = "Icon size",
         btn_macro = "Create macro", btn_new = "+ Add request",
         hint_spells = "Icon empty = spell icon · Target = who casts the spell · "
-            .. "Duration = seconds the buff lasts. × removes the row.",
+            .. "Duration = seconds the buff lasts (0 = do not show at all). × removes the row.",
         hilfe_titel = "— commands:",
         geladen = "CallAssistance %s loaded — /ca for commands",
         makro_angelegt = "macro created (character specific): %s",
@@ -111,6 +112,7 @@ local TEXTE = {
         position_an = "placing: move the display with the mouse, then /ca position to finish",
         position_aus = "placing finished",
         btn_move = "Move display",
+        btn_done = "Done",
         buff_aus_api = "remaining from buff API: %s",
         buff_nicht_lesbar = "buff not readable — counting myself (%.0f s)",
         hilfe = [[
@@ -208,7 +210,7 @@ local function dbInit()
         if e.icon == nil then e.icon = 0 end
         if e.phrase == nil then e.phrase = "" end
         if e.ziel == nil then e.ziel = "" end
-        if type(e.dauer) ~= "number" or e.dauer <= 0 then e.dauer = 10 end
+        if type(e.dauer) ~= "number" then e.dauer = 10 end
         if e.id == nil then
             e.id = DB.naechsteID
             DB.naechsteID = DB.naechsteID + 1
@@ -346,7 +348,7 @@ local function setzePosition()
 end
 
 -- Positionier-Modus: Anzeige sichtbar machen, damit sie sich mit der Maus verschieben lässt.
-local platzFlaeche, platzHinweis
+local platzFlaeche, platzHinweis, platzKnopf
 local platzieren = false
 
 local function setzePlatzieren(an)
@@ -360,6 +362,15 @@ local function setzePlatzieren(an)
         platzHinweis:SetPoint("BOTTOM", anzeige, "TOP", 0, 4)
     end
     if platzieren then
+        if not platzKnopf then
+            platzKnopf = CreateFrame("Button", "CallAssistanceFertig", UIParent, "UIPanelButtonTemplate")
+            platzKnopf:SetSize(160, 30)
+            platzKnopf:SetPoint("CENTER", UIParent, "CENTER", 0, -60)
+            platzKnopf:SetFrameStrata("DIALOG")
+            platzKnopf:SetScript("OnClick", function() setzePlatzieren(false) end)
+        end
+        platzKnopf:SetText(T("btn_done"))
+        platzKnopf:Show()
         platzHinweis:SetText(T("position_hinweis"))
         platzFlaeche:Show()
         platzHinweis:Show()
@@ -367,6 +378,7 @@ local function setzePlatzieren(an)
         anzeige:SetSize(groesse + 70, groesse + 12)
         anzeige:Show()
     else
+        if platzKnopf then platzKnopf:Hide() end
         platzFlaeche:Hide()
         platzHinweis:Hide()
         if #laufend == 0 then anzeige:Hide() end
@@ -395,6 +407,7 @@ end
 -- ---------------------------------------------------------------- Anfrage starten
 
 local indexLaufend = {}
+local beende
 
 local function formatiere(rest)
     if rest >= 60 then
@@ -414,8 +427,13 @@ local function starte(posten, dauerOverride)
         table.insert(laufend, eintrag)
     end
     eintrag.start = jetzt
-    eintrag.dauer = dauerOverride or posten.dauer or 10
-    if eintrag.dauer <= 0 then eintrag.dauer = 10 end
+    -- Dauer 0 = diese Anfrage soll gar nicht angezeigt werden
+    local dauer = dauerOverride or posten.dauer
+    if not dauer or dauer <= 0 then
+        if indexLaufend[posten.id] then beende(indexLaufend[posten.id]) end
+        return nil
+    end
+    eintrag.dauer = dauer
     eintrag.gesamt = eintrag.dauer
     eintrag.bis = nil
     eintrag.ausApi = false
@@ -436,7 +454,7 @@ local function starte(posten, dauerOverride)
     return eintrag
 end
 
-local function beende(eintrag)
+beende = function(eintrag)
     indexLaufend[eintrag.posten.id] = nil
     for i, e in ipairs(laufend) do
         if e == eintrag then
@@ -526,6 +544,7 @@ local function pruefe(event, text, absender)
         end
         if treffer then
             local eintrag = starte(posten)
+            if not eintrag then return end
             melde(T("treffer", posten.name or "?"), "|cff80ff80")
             local rest = buffRest(posten)
             if rest then
@@ -751,7 +770,7 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
             posten.icon = (n and n > 0) and math.floor(n) or 0
         elseif befehl == "dauer" then
             local n = tonumber(wert)
-            if n and n > 0 then posten.dauer = math.floor(n) end
+            if n and n >= 0 then posten.dauer = math.floor(n) end
         end
         print("|cff40ff40CallAssistance|r " .. T("gesetzt", posten.name or "?", befehl, tostring(wert)))
         if optionenPanel then aufbauen() end
@@ -918,7 +937,7 @@ aufbauen = function()
             dauer = feld(c, 372, zy, 40,
                 function() local e = DB.posten[idx]; return e and tostring(e.dauer) end,
                 function(t) local e = DB.posten[idx]; local n = tonumber(t)
-                    if e and n and n > 0 then e.dauer = math.floor(n) end end),
+                    if e and n and n >= 0 then e.dauer = math.floor(n) end end),
         }
         local makro = CreateFrame("Button", nil, c, "UIPanelButtonTemplate")
         makro:SetSize(104, 20)
