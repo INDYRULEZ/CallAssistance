@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "2.0"
+local VERSION = "2.1"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -652,7 +652,8 @@ local function importCode(code)
             local phrase = felder[2] or ""
             local ziel = felder[3] or ""
             local dauer = tonumber(felder[4])
-            if not dauer or dauer <= 0 then dauer = nil end
+            if dauer then dauer = math.floor(dauer) end
+            if not dauer or dauer < 0 then dauer = nil end
             local name
             if C_Spell and C_Spell.GetSpellInfo then
                 local info = C_Spell.GetSpellInfo(spellID)
