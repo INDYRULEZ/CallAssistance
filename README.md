@@ -12,10 +12,10 @@ Kampfgetümmel tippen wollen — und wissen möchten, wie lange der Buff noch l�
 
 1. Du pflegst eine Tabelle: **Name · SpellID · Symbol · Flüstertext · Ziel · Dauer**.
    `Ziel` ist die Person, die den Zauber wirkt (z. B. der Freund, der Rescue castet).
-2. Für jede vollständige Zeile erscheint unten ein **Knopf mit dem Zauber-Symbol**. Ein Klick
-   schickt `/w <Ziel> <Flüstertext>`. Im Kampf ist `SendChatMessage` für Addons gesperrt — ein
-   Makro bzw. ein Makro-Knopf, den **du** drückst, geht. Deshalb dieser Umweg.
-   (Wer lieber Makros auf der Aktionsleiste mag: „Macro erstellen" pro Zeile oder `/ca macros`.)
+2. Für jede Zeile lässt du einmal ein Makro anlegen („Macro erstellen", `/ca macros` oder automatisch
+   beim `/ca import`) und ziehst es auf die Aktionsleiste. Das Makro schickt
+   `/w <Ziel> <Flüstertext>`. Im Kampf ist `SendChatMessage` für Addons gesperrt — ein Makro, das
+   **du** drückst, geht.
 3. Drückst du das Makro, erkennt das Addon die eigene ausgehende Nachricht
    (`CHAT_MSG_WHISPER_INFORM`) und blendet Symbol, Restzeit und Balken ein.
 4. Die Restzeit zählt ab dem Flüstern mit der eingetragenen **Dauer** herunter.
@@ -65,8 +65,7 @@ liest das Addon die echte Buff-Laufzeit, sobald sie sichtbar ist, und korrigiert
 Die Anzeige lässt sich mit der Maus verschieben. Weil sie ohne laufenden Countdown unsichtbar
 ist, gibt es dafür `/ca position`: dann erscheint ein blauer Platzhalter, den du an die richtige
 Stelle ziehst — nochmal `/ca position` beendet den Modus. Die Position wird gespeichert.
-Die Knopfleiste verschiebst du am kleinen Griff links neben den Symbolen. Größe und Bestandteile
-der Anzeige stehen in den Einstellungen.
+Größe und Bestandteile der Anzeige stehen in den Einstellungen.
 
 ## Tabelle weitergeben
 
@@ -81,8 +80,8 @@ Der andere fügt ihn mit `/ca import <Code>` ein. Format ist
 Der **Name** der Anfrage wird nicht mitgeschickt — er kommt aus dem Zauber selbst.
 Vorhandene Zauber werden aktualisiert statt doppelt angelegt.
 
-Danach ist nichts weiter zu tun: Tabelle gefüllt, Knöpfe da. Also: Addon installieren,
-ein Befehl einfügen, fertig.
+Danach ist nichts weiter zu tun: Tabelle gefüllt und die Makros sind schon angelegt (die
+Makro-Namen stehen im Chat). Nur noch auf die Aktionsleiste ziehen.
 
 ## Grenzen
 

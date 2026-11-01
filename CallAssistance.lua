@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "1.7"
+local VERSION = "1.8"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -171,9 +171,6 @@ local START = {
 }
 
 local DB
-
--- Knopfleiste (Definition weiter unten, hier vorwaerts deklariert)
-local leiste, leisteNeu, leisteDirty
 
 -- Einstellungsseite (Definition weiter unten, hier nur vorwaerts deklariert)
 local optionenPanel, inhaltFrame, aufbauZaehler = nil, nil, 0
@@ -367,12 +364,10 @@ local function setzePlatzieren(an)
         local groesse = DB.groesse or 40
         anzeige:SetSize(groesse + 70, groesse + 12)
         anzeige:Show()
-        leisteNeu()
     else
         platzFlaeche:Hide()
         platzHinweis:Hide()
         if #laufend == 0 then anzeige:Hide() end
-        leisteNeu()
     end
 end
 
@@ -393,124 +388,6 @@ local function buffRest(posten)
     local rest = ablauf - GetTime()
     if rest <= 0 then return nil end
     return rest, daten.duration
-end
-
--- ---------------------------------------------------------------- Knopfleiste
--- Eigene Knöpfe statt Makros: SecureActionButtonTemplate mit macrotext — damit geht
--- das Flüstern auch im Kampf (dieselbe Ausnahme wie ein Makro, nur ohne Ziehen in die Leiste).
-
-leiste = CreateFrame("Frame", "CallAssistanceLeiste", UIParent)
-leiste:SetSize(40, 36)
-leiste:SetPoint("CENTER", UIParent, "CENTER", 0, -160)
-leiste:SetFrameStrata("HIGH")
-leiste:SetMovable(true)
-leiste:EnableMouse(true)
-leiste:RegisterForDrag("LeftButton")
-leiste:SetScript("OnDragStart", function(self)
-    if not InCombatLockdown() then self:StartMoving() end
-end)
-leiste:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    local point, _, _, x, y = self:GetPoint()
-    if DB then DB.leistePosition = { point = point, x = x, y = y } end
-end)
-leiste:Hide()
-
-local knoepfe = {}
-local griff
-leisteDirty = false
-
-local function setzeLeistenPosition()
-    if not DB then return end
-    local p = DB.leistePosition
-    leiste:ClearAllPoints()
-    if p and p.point then
-        leiste:SetPoint(p.point, UIParent, p.point, p.x or 0, p.y or 0)
-    else
-        leiste:SetPoint("CENTER", UIParent, "CENTER", 0, -160)
-    end
-end
-
-leisteNeu = function()
-    if not DB then return end
-    if InCombatLockdown() then
-        leisteDirty = true          -- im Kampf keine Attribute setzen: nach dem Kampf nachziehen
-        return
-    end
-    leisteDirty = false
-
-    -- Griff links: nur darüber lässt sich die Leiste ziehen (die Knöpfe selbst klicken)
-    if not griff then
-        griff = CreateFrame("Frame", nil, leiste)
-        griff:SetSize(10, 36)
-        griff:SetPoint("TOPLEFT", leiste, "TOPLEFT", 0, 0)
-        griff:EnableMouse(true)
-        griff:RegisterForDrag("LeftButton")
-        griff:SetScript("OnDragStart", function()
-            if not InCombatLockdown() then leiste:StartMoving() end
-        end)
-        griff:SetScript("OnDragStop", function()
-            leiste:StopMovingOrSizing()
-            local point, _, _, x, y = leiste:GetPoint()
-            if DB then DB.leistePosition = { point = point, x = x, y = y } end
-        end)
-        local flaeche = griff:CreateTexture(nil, "ARTWORK")
-        flaeche:SetAllPoints()
-        flaeche:SetColorTexture(1, 1, 1, 0.18)
-        local pfeil = griff:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        pfeil:SetPoint("CENTER")
-        pfeil:SetText("⋮")
-    end
-
-    for _, b in ipairs(knoepfe) do b:Hide() end
-
-    local groesse = 36
-    local anzahl = 0
-    for _, posten in ipairs(DB.posten) do
-        local vollstaendig = posten.ziel and #tostring(posten.ziel) > 0
-            and posten.phrase and #tostring(posten.phrase) > 0
-        if vollstaendig then
-            anzahl = anzahl + 1
-            local b = knoepfe[anzahl]
-            if not b then
-                b = CreateFrame("Button", "CallAssistanceKnopf" .. anzahl, leiste,
-                    "SecureActionButtonTemplate")
-                b:RegisterForClicks("AnyUp")
-                b:SetSize(groesse, groesse)
-                b.icon = b:CreateTexture(nil, "ARTWORK")
-                b.icon:SetAllPoints()
-                b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-                b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-                b:SetScript("OnEnter", function(self)
-                    if not self.posten then return end
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetText(tostring(self.posten.name or "?"), 1, 1, 1)
-                    GameTooltip:AddLine("/w " .. tostring(self.posten.ziel) .. " "
-                        .. tostring(self.posten.phrase), 0.8, 0.8, 1)
-                    GameTooltip:Show()
-                end)
-                b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-                knoepfe[anzahl] = b
-            end
-
-            b.posten = posten
-            b:SetAttribute("type", "macro")
-            b:SetAttribute("macrotext", "/w " .. posten.ziel .. " " .. posten.phrase)
-
-            local icon = posten.icon
-            if not icon or icon <= 0 then icon = C_Spell.GetSpellTexture(posten.spellID) end
-            if icon then b.icon:SetTexture(icon) end
-            b.icon:SetDesaturated(false)
-
-            b:ClearAllPoints()
-            b:SetPoint("TOPLEFT", leiste, "TOPLEFT", 12 + (anzahl - 1) * (groesse + 4), 0)
-            b:Show()
-        end
-    end
-
-    leiste:SetWidth(math.max(1, 12 + anzahl * (groesse + 4)))
-    leiste:SetHeight(groesse)
-    if anzahl > 0 then leiste:Show() else leiste:Hide() end
 end
 
 -- ---------------------------------------------------------------- Anfrage starten
@@ -661,7 +538,6 @@ local function pruefe(event, text, absender)
 end
 
 rahmen:RegisterEvent("PLAYER_LOGIN")
-rahmen:RegisterEvent("PLAYER_REGEN_ENABLED")
 rahmen:RegisterEvent("CHAT_MSG_WHISPER_INFORM")
 rahmen:RegisterEvent("CHAT_MSG_PARTY")
 rahmen:RegisterEvent("CHAT_MSG_PARTY_LEADER")
@@ -672,14 +548,8 @@ rahmen:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
     if event == "PLAYER_LOGIN" then
         dbInit()
         setzePosition()
-        setzeLeistenPosition()
-        leisteNeu()
         print("|cff40ff40CallAssistance|r " .. T("geladen", VERSION))
         baueOptionen()
-        return
-    end
-    if event == "PLAYER_REGEN_ENABLED" then
-        if leisteDirty then leisteNeu() end
         return
     end
     pruefe(event, arg1, arg2)
@@ -792,7 +662,15 @@ local function importCode(code)
         end
     end
     if optionenPanel and aufbauen then aufbauen() end
-    leisteNeu()
+    -- Makros gleich mit anlegen, damit dem Mitspieler ein Befehl reicht
+    if not InCombatLockdown() then
+        for _, posten in ipairs(DB.posten) do
+            if posten.ziel and #tostring(posten.ziel) > 0
+                and posten.phrase and #tostring(posten.phrase) > 0 then
+                makroErstellen(posten)
+            end
+        end
+    end
     return anzahl
 end
 
@@ -1151,8 +1029,6 @@ aufbauen = function()
         groesseWert:SetText(string.format("%d", DB.groesse))
         slider:SetValue(DB.groesse)
     end
-
-    leisteNeu()
 
     return c
 end
