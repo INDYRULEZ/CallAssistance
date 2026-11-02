@@ -13,9 +13,10 @@ Kampfgetümmel tippen wollen — und wissen möchten, wie lange der Buff noch l�
 1. Du pflegst eine Tabelle: **Name · SpellID · Symbol · Flüstertext · Ziel · Dauer**.
    `Ziel` ist die Person, die den Zauber wirkt (z. B. der Freund, der Rescue castet).
 2. Für jede Zeile lässt du einmal ein Makro anlegen („Macro erstellen", `/ca macros` oder automatisch
-   beim `/ca import`) und ziehst es auf die Aktionsleiste. Das Makro schickt
-   `/w <Ziel> <Flüstertext>`. Im Kampf ist `SendChatMessage` für Addons gesperrt — ein Makro, das
-   **du** drückst, geht.
+   beim `/ca import`) und ziehst es auf die Aktionsleiste. Das Makro flüstert
+   `/w <Ziel> <Flüstertext>` **und** ruft `/ca start <SpellID>` auf — der zweite Aufruf startet den
+   Countdown. Nötig, weil im Kampf der eigene Chattext für Addons gesperrt ist („secret string");
+   der Befehl aus dem Makro funktioniert dagegen auch im Kampf.
 3. Drückst du das Makro, erkennt das Addon die eigene ausgehende Nachricht
    (`CHAT_MSG_WHISPER_INFORM`) und blendet Symbol, Restzeit und Balken ein.
 4. Die Restzeit zählt ab dem Flüstern mit der eingetragenen **Dauer** herunter.

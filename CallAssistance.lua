@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "2.1"
+local VERSION = "2.2"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -603,7 +603,10 @@ local function makroErstellen(posten)
     end
     texture = texture or 134400
 
-    local koerper = string.format("/w %s %s", posten.ziel, posten.phrase)
+    -- Zweite Zeile startet den Countdown direkt: im Kampf ist der eigene Chattext
+    -- für Addons gesperrt ("secret string"), das Chat-Ereignis allein reicht dort nicht.
+    local koerper = string.format("/w %s %s\n/ca start %d", posten.ziel, posten.phrase,
+        math.floor(posten.spellID or 0))
 
     local index = GetMacroIndexByName and GetMacroIndexByName(name) or 0
     if index and index > 0 then
@@ -788,6 +791,16 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
     elseif befehl == "position" or befehl == "bewegen" then
         setzePlatzieren(not platzieren)
         print("|cff40ff40CallAssistance|r " .. (platzieren and T("position_an") or T("position_aus")))
+    elseif befehl == "start" then
+        local id = tonumber(arg)
+        local gefunden
+        if id then
+            for _, posten in ipairs(DB.posten) do
+                if posten.spellID == math.floor(id) then gefunden = posten; break end
+            end
+        end
+        if not gefunden and id then gefunden = DB.posten[math.floor(id)] end
+        if gefunden then starte(gefunden) end
     elseif befehl == "macros" then
         istDa()
         if InCombatLockdown() then
