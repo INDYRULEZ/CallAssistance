@@ -8,7 +8,7 @@
 -- ab dem Moment des Fluesterns mit der eingetragenen Gesamtdauer.
 
 local ADDON = "CallAssistance"
-local VERSION = "2.2"
+local VERSION = "2.3"
 
 -- ---------------------------------------------------------------- Sprachen
 
@@ -568,6 +568,9 @@ rahmen:RegisterEvent("CHAT_MSG_RAID_LEADER")
 rahmen:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
     if event == "PLAYER_LOGIN" then
         dbInit()
+        if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+            C_ChatInfo.RegisterAddonMessagePrefix("CALLSPELL")
+        end
         setzePosition()
         print("|cff40ff40CallAssistance|r " .. T("geladen", VERSION))
         baueOptionen()
@@ -800,7 +803,16 @@ SlashCmdList["CALLASSISTANCE"] = function(rest)
             end
         end
         if not gefunden and id then gefunden = DB.posten[math.floor(id)] end
-        if gefunden then starte(gefunden) end
+        if gefunden then
+            starte(gefunden)
+            -- Zusätzlich per Addon-Kanal an den Caster: dort zeigt CallSpell das Symbol,
+            -- auch im Kampf, wo der Chattext gesperrt ist.
+            local ziel = gefunden.ziel
+            if ziel and #tostring(ziel) > 0 and C_ChatInfo and C_ChatInfo.SendAddonMessage then
+                pcall(C_ChatInfo.SendAddonMessage, "CALLSPELL",
+                    tostring(math.floor(gefunden.spellID or 0)), "WHISPER", ziel)
+            end
+        end
     elseif befehl == "macros" then
         istDa()
         if InCombatLockdown() then
